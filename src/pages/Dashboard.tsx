@@ -9,17 +9,19 @@ import {
   ClipboardList,
   AlertCircle,
   Database,
-  Loader2
+  Loader2,
+  UserPlus
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { seedExams } from '../services/seedService';
+import { seedExams, createTestAccounts } from '../services/seedService';
 import { cn } from '../lib/utils';
 
 export default function Dashboard() {
   const { profile, isAdmin, isGuru, isSiswa } = useAuth();
   const [seeding, setSeeding] = useState(false);
+  const [creatingAccounts, setCreatingAccounts] = useState(false);
   
   const handleSeed = async () => {
     setSeeding(true);
@@ -32,6 +34,19 @@ export default function Dashboard() {
       alert('Gagal melakukan bootstrap.');
     } finally {
       setSeeding(false);
+    }
+  };
+
+  const handleCreateAccounts = async () => {
+    setCreatingAccounts(true);
+    try {
+      await createTestAccounts();
+      alert('Akun demo berhasil dibuat! \n\nSiswa: siswa_tkj / password123 \nGuru: guru_tkj / password123 \n\nSilakan mencoba login.');
+    } catch (err) {
+      console.error(err);
+      alert('Gagal membuat akun demo. Mungkin sudah ada.');
+    } finally {
+      setCreatingAccounts(false);
     }
   };
 
@@ -100,14 +115,24 @@ export default function Dashboard() {
           <div className="flex flex-wrap justify-between items-center gap-6 mb-8">
             <h3 className="text-xl font-bold text-gray-900">Aktivitas Terkini</h3>
             {isAdmin && (
-              <button 
-                onClick={handleSeed}
-                disabled={seeding}
-                className="flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-black transition-all disabled:opacity-50"
-              >
-                {seeding ? <Loader2 className="animate-spin" size={16} /> : <Database size={16} />}
-                Bootstrap Ujian & Soal (30 Soal/Jurusan)
-              </button>
+              <div className="flex gap-2">
+                <button 
+                  onClick={handleCreateAccounts}
+                  disabled={creatingAccounts}
+                  className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all disabled:opacity-50"
+                >
+                  {creatingAccounts ? <Loader2 className="animate-spin" size={16} /> : <UserPlus size={16} />}
+                  Buat Akun Demo (GURU/SISWA)
+                </button>
+                <button 
+                  onClick={handleSeed}
+                  disabled={seeding}
+                  className="flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-black transition-all disabled:opacity-50"
+                >
+                  {seeding ? <Loader2 className="animate-spin" size={16} /> : <Database size={16} />}
+                  Bootstrap Ujian & Soal (30 Soal/Jurusan)
+                </button>
+              </div>
             )}
           </div>
           

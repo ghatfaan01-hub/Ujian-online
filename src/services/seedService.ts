@@ -6,15 +6,42 @@ import {
   getDoc,
   query,
   where,
-  addDoc
+  addDoc,
+  serverTimestamp
 } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { db, auth } from '../lib/firebase';
 
-export async function bootstrapSystem() {
-  // 1. Create Admin if not exists
-  // For demo, we might need to handle this via UI because we can't create users easily without auth session
-  // But we can check if the current user is first user.
+export async function createTestAccounts() {
+  const testUsers = [
+    { username: 'admin', password: 'password123', role: 'admin', fullName: 'Administrator Utama', department: 'Umum' },
+    { username: 'guru_tkj', password: 'password123', role: 'guru', fullName: 'Bpk. Wijaya, S.Kom', department: 'TKJ' },
+    { username: 'siswa_tkj', password: 'password123', role: 'siswa', fullName: 'Budi Santoso', department: 'TKJ', nisn: '1122334455' },
+    { username: 'siswa_dkv', password: 'password123', role: 'siswa', fullName: 'Siti Aminah', department: 'DKV', nisn: '5544332211' }
+  ];
+
+  for (const u of testUsers) {
+    try {
+      const email = `${u.username}@smkprima.sch.id`;
+      const res = await createUserWithEmailAndPassword(auth, email, u.password);
+      await setDoc(doc(db, 'users', res.user.uid), {
+        uid: res.user.uid,
+        username: u.username,
+        role: u.role,
+        fullName: u.fullName,
+        department: u.department,
+        nisn: u.nisn || '',
+        createdAt: serverTimestamp()
+      });
+      console.log(`Created account for ${u.username}`);
+    } catch (err: any) {
+      if (err.code === 'auth/email-already-in-use') {
+        console.log(`Account ${u.username} already exists.`);
+      } else {
+        console.error(err);
+      }
+    }
+  }
 }
 
 export const departmentQuestions: Record<string, any[]> = {

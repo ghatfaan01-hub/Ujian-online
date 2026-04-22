@@ -28,7 +28,8 @@ export default function UserManagement() {
 
   const filteredUsers = users.filter(u => 
     u.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    u.username?.toLowerCase().includes(searchTerm.toLowerCase())
+    u.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    u.nisn?.includes(searchTerm)
   );
 
   return (

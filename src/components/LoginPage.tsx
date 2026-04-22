@@ -3,12 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
-import { GraduationCap, Lock, User, AlertCircle } from 'lucide-react';
-import { motion } from 'motion/react';
+import { GraduationCap, Lock, User, AlertCircle, BookOpen, Fingerprint } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { cn } from '../lib/utils';
 
 export default function LoginPage() {
-  const [identifier, setIdentifier] = useState(''); // NISN or Username
+  const [role, setRole] = useState<'siswa' | 'guru'>('siswa');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [nisn, setNisn] = useState('');
+  const [jurusan, setJurusan] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -19,26 +23,56 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // In this system, we use email based on identifier for simplicity with Firebase Auth
-      // or we can use a lookup in Firestore if needed.
-      // For this implementation, let's assume email is identifier + "@smkprima.sch.id"
-      const email = identifier.includes('@') ? identifier : `${identifier}@smkprima.sch.id`;
+      // In this system, we use email based on username for simplicity with Firebase Auth
+      const email = username.includes('@') ? username : `${username}@smkprima.sch.id`;
       
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      const fbUser = userCredential.user;
 
       // Check if user has profile in Firestore
-      const docRef = doc(db, 'users', user.uid);
+      const docRef = doc(db, 'users', fbUser.uid);
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
+        const profile = docSnap.data();
+        
+        // Validation for role-specific fields
+        if (role === 'siswa') {
+          if (profile.role !== 'siswa' && profile.role !== 'admin') {
+            setError('Akun ini bukan akun siswa.');
+            await auth.signOut();
+            setLoading(false);
+            return;
+          }
+          if (profile.nisn !== nisn && profile.role !== 'admin') {
+            setError('NISN yang anda masukkan tidak sesuai.');
+            await auth.signOut();
+            setLoading(false);
+            return;
+          }
+          if (profile.department !== jurusan && profile.role !== 'admin') {
+            setError('Jurusan yang anda masukkan tidak sesuai.');
+            await auth.signOut();
+            setLoading(false);
+            return;
+          }
+        } else {
+          if (profile.role === 'siswa') {
+            setError('Akun ini bukan akun guru/staff.');
+            await auth.signOut();
+            setLoading(false);
+            return;
+          }
+        }
+
         navigate('/app');
       } else {
-        setError('Profil pengguna tidak ditemukan.');
+        setError('Profil pengguna tidak ditemukan di database.');
+        await auth.signOut();
       }
     } catch (err: any) {
       console.error(err);
-      setError('Gagal masuk. Periksa NISN/Username dan Password anda.');
+      setError('Gagal masuk. Periksa kembali Username dan Password anda.');
     } finally {
       setLoading(false);
     }
@@ -47,9 +81,9 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md bg-white rounded-[2rem] shadow-2xl p-10 relative overflow-hidden"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl p-8 md:p-10 relative overflow-hidden"
       >
         <div className="absolute top-0 left-0 w-full h-2 bg-primary"></div>
         
@@ -57,64 +91,155 @@ export default function LoginPage() {
           <div className="w-16 h-16 bg-red-50 text-primary rounded-2xl flex items-center justify-center mb-4">
             <GraduationCap size={32} />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Selamat Datang</h1>
-          <p className="text-gray-500">Silakan masuk ke akun anda</p>
+          <h1 className="text-2xl font-black text-gray-900 tracking-tight">SMK Prima Unggul</h1>
+          <p className="text-gray-500 font-medium tracking-tight">Pintu Masuk Sistem Akademik</p>
+        </div>
+
+        {/* Role Switcher */}
+        <div className="flex p-1 bg-gray-100 rounded-2xl mb-8">
+          <button 
+            type="button"
+            onClick={() => { setRole('siswa'); setError(''); }}
+            className={cn(
+              "flex-1 py-3 rounded-xl text-sm font-bold transition-all",
+              role === 'siswa' ? "bg-white text-primary shadow-sm" : "text-gray-500 hover:text-gray-700"
+            )}
+          >
+            Siswa (NISN)
+          </button>
+          <button 
+            type="button"
+            onClick={() => { setRole('guru'); setError(''); }}
+            className={cn(
+              "flex-1 py-3 rounded-xl text-sm font-bold transition-all",
+              role === 'guru' ? "bg-white text-primary shadow-sm" : "text-gray-500 hover:text-gray-700"
+            )}
+          >
+            Guru / Staff
+          </button>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-50 text-primary text-sm rounded-xl flex items-center gap-3">
-            <AlertCircle size={20} />
+          <motion.div 
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="mb-6 p-4 bg-red-50 text-primary text-xs font-bold rounded-xl flex items-center gap-3 border border-red-100"
+          >
+            <AlertCircle size={18} />
             <span>{error}</span>
-          </div>
+          </motion.div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-6">
+        <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">NISN / Username</label>
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">Username</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
-                <User size={20} />
+                <User size={18} />
               </div>
               <input
                 type="text"
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                className="block w-full pl-12 pr-4 py-4 bg-gray-50 border-transparent focus:bg-white focus:ring-2 focus:ring-primary focus:border-transparent rounded-2xl transition-all"
-                placeholder="Masukkan NISN atau Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="block w-full pl-12 pr-4 py-4 bg-gray-50 border-transparent focus:bg-white focus:ring-2 focus:ring-primary focus:border-transparent rounded-2xl transition-all font-semibold"
+                placeholder="Ex: budi_prima"
                 required
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">Password</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
-                <Lock size={20} />
+                <Lock size={18} />
               </div>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="block w-full pl-12 pr-4 py-4 bg-gray-50 border-transparent focus:bg-white focus:ring-2 focus:ring-primary focus:border-transparent rounded-2xl transition-all"
+                className="block w-full pl-12 pr-4 py-4 bg-gray-50 border-transparent focus:bg-white focus:ring-2 focus:ring-primary focus:border-transparent rounded-2xl transition-all font-semibold"
                 placeholder="••••••••"
                 required
               />
             </div>
           </div>
 
+          <AnimatePresence mode="wait">
+            {role === 'siswa' && (
+              <motion.div
+                key="siswa-fields"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-5 overflow-hidden"
+              >
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">NISN Siswa</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                      <Fingerprint size={18} />
+                    </div>
+                    <input
+                      type="text"
+                      value={nisn}
+                      onChange={(e) => setNisn(e.target.value)}
+                      className="block w-full pl-12 pr-4 py-4 bg-gray-50 border-transparent focus:bg-white focus:ring-2 focus:ring-primary focus:border-transparent rounded-2xl transition-all font-semibold"
+                      placeholder="Masukkan 10 digit NISN"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">Jurusan</label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                      <BookOpen size={18} />
+                    </div>
+                    <select
+                      value={jurusan}
+                      onChange={(e) => setJurusan(e.target.value)}
+                      className="block w-full pl-12 pr-4 py-4 bg-gray-50 border-transparent focus:bg-white focus:ring-2 focus:ring-primary focus:border-transparent rounded-2xl appearance-none transition-all font-semibold"
+                      required
+                    >
+                      <option value="">Pilih Jurusan</option>
+                      <option value="TKJ">Teknik Komputer Jaringan (TKJ)</option>
+                      <option value="DKV">Desain Komunikasi Visual (DKV)</option>
+                      <option value="AK">Akuntansi (AK)</option>
+                      <option value="BC">Broadcasting (BC)</option>
+                      <option value="MPLB">Manajemen Perkantoran (MPLB)</option>
+                      <option value="BD">Bisnis Digital (BD)</option>
+                    </select>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-4 bg-primary text-white rounded-2xl font-bold text-lg hover:bg-primary-dark transition-all shadow-lg shadow-red-100 flex items-center justify-center"
+            className="w-full py-4 bg-primary text-white rounded-2xl font-black text-lg hover:bg-primary-dark transition-all shadow-xl shadow-red-100 flex items-center justify-center gap-3 active:scale-95"
           >
-            {loading ? 'Memproses...' : 'Masuk sekarang'}
+            {loading ? (
+              <>
+                <motion.div 
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                  className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                />
+                Verifikasi...
+              </>
+            ) : (
+              'Masuk Sekarang'
+            )}
           </button>
         </form>
 
-        <div className="mt-10 pt-8 border-t border-gray-100 text-center">
-          <p className="text-sm text-gray-500 mb-2">Belum memiliki akun?</p>
-          <p className="text-sm font-medium text-primary">Hubungi Admin atau Guru anda</p>
+        <div className="mt-8 pt-8 border-t border-gray-100 text-center">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Butuh Bantuan?</p>
+          <p className="text-sm font-bold text-primary italic">Lupa Password atau Belum Ada Akun?</p>
         </div>
       </motion.div>
     </div>
