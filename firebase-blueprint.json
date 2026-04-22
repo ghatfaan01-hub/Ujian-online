@@ -1,0 +1,116 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account information for authentication and role-based access.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "username": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "guru", "staff", "siswa"] },
+        "fullName": { "type": "string" },
+        "department": { "type": "string", "enum": ["TKJ", "DKV", "AK", "BC", "MPLB", "BD", "Umum"] },
+        "nisn": { "type": "string", "description": "Only for siswa" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "username", "role", "fullName"]
+    },
+    "Student": {
+      "title": "Student Data",
+      "description": "Information about students registered in the system.",
+      "type": "object",
+      "properties": {
+        "nisn": { "type": "string" },
+        "name": { "type": "string" },
+        "class": { "type": "string" },
+        "department": { "type": "string" }
+      },
+      "required": ["nisn", "name", "class", "department"]
+    },
+    "Attendance": {
+      "title": "Attendance Record",
+      "description": "Daily attendance for students or staff.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "targetId": { "type": "string", "description": "Student ID or Staff ID" },
+        "type": { "type": "string", "enum": ["karyawan", "siswa"] },
+        "status": { "type": "string", "enum": ["hadir", "sakit", "izin", "alfa"] },
+        "date": { "type": "string", "format": "date" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "location": { "type": "string", "description": "Kota Tangerang Selatan" }
+      },
+      "required": ["targetId", "type", "status", "date", "timestamp"]
+    },
+    "Exam": {
+      "title": "Exam Information",
+      "description": "Details about a specific online exam.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "department": { "type": "string" },
+        "kkm": { "type": "number", "default": 50 },
+        "startTime": { "type": "string", "format": "date-time" },
+        "endTime": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "department"]
+    },
+    "Question": {
+      "title": "Exam Question",
+      "description": "A single question in an exam.",
+      "type": "object",
+      "properties": {
+        "examId": { "type": "string" },
+        "text": { "type": "string" },
+        "options": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "correctOption": { "type": "integer" },
+        "difficulty": { "type": "string", "enum": ["gampang", "sulit"] }
+      },
+      "required": ["examId", "text", "options", "correctOption"]
+    },
+    "ExamResult": {
+      "title": "Exam Result",
+      "description": "Student's performance in an exam.",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "examId": { "type": "string" },
+        "score": { "type": "number" },
+        "status": { "type": "string", "enum": ["lulus", "tidak_lulus"] },
+        "submittedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["studentId", "examId", "score", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Global user profiles."
+    },
+    "/students/{nisn}": {
+      "schema": "Student",
+      "description": "Student records."
+    },
+    "/attendance/{attendanceId}": {
+      "schema": "Attendance",
+      "description": "All attendance logs."
+    },
+    "/exams/{examId}": {
+      "schema": "Exam",
+      "description": "Exam definitions."
+    },
+    "/exams/{examId}/questions/{questionId}": {
+      "schema": "Question",
+      "description": "Questions for a specific exam."
+    },
+    "/examResults/{resultId}": {
+      "schema": "ExamResult",
+      "description": "Scores for exams."
+    }
+  }
+}
