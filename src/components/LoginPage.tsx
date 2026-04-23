@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { GraduationCap, Lock, User, AlertCircle, BookOpen, Fingerprint } from 'lucide-react';
+import { GraduationCap, Lock, User, AlertCircle, BookOpen, Fingerprint, Database, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
+
+import { seedExams, createTestAccounts } from '../services/seedService';
 
 export default function LoginPage() {
   const [role, setRole] = useState<'siswa' | 'guru'>('siswa');
@@ -13,7 +15,22 @@ export default function LoginPage() {
   const [jurusan, setJurusan] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [bootstrapping, setBootstrapping] = useState(false);
   const navigate = useNavigate();
+
+  const handleBootstrap = async () => {
+    if (!supabase) return;
+    setBootstrapping(true);
+    try {
+      await createTestAccounts();
+      await seedExams();
+      alert('Sistem berhasil disiapkan!\n\nGunakan:\n- Admin: admin / password123\n- Siswa: siswa_tkj / password123 (NISN: 1122334455 / TKJ)');
+    } catch (err: any) {
+      alert('Peringatan: ' + err.message);
+    } finally {
+      setBootstrapping(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -261,8 +278,22 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-8 pt-8 border-t border-gray-100 text-center">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Butuh Bantuan?</p>
-          <p className="text-sm font-bold text-primary italic">Lupa Password atau Belum Ada Akun?</p>
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Baru Pertama Kali?</p>
+          <button 
+            type="button"
+            onClick={handleBootstrap}
+            disabled={bootstrapping}
+            className="flex items-center justify-center gap-2 w-full py-3 bg-gray-50 text-gray-900 rounded-xl font-bold text-xs hover:bg-gray-100 transition-colors disabled:opacity-50"
+          >
+            {bootstrapping ? (
+              <motion.div 
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                className="w-4 h-4 border-2 border-gray-300 border-t-primary rounded-full"
+              />
+            ) : <Database size={14} />}
+            SIAPKAN DATA & AKUN DEMO
+          </button>
         </div>
       </motion.div>
     </div>

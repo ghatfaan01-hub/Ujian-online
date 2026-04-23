@@ -11,6 +11,8 @@ export async function createTestAccounts() {
   for (const u of testUsers) {
     try {
       const email = `${u.username}@smkprima.sch.id`;
+      
+      // 1. Sign up user (or get existing)
       const { data, error } = await supabase.auth.signUp({
         email,
         password: u.password,
@@ -25,16 +27,37 @@ export async function createTestAccounts() {
         }
       });
 
-      if (error) {
-        if (error.message.includes('already registered') || error.message.includes('Database error')) {
-          console.log(`Account ${u.username} already exists or has conflict.`);
-          continue;
-        }
+      if (error && !error.message.includes('already registered')) {
         throw error;
       }
-      console.log(`Created account for ${u.username}`);
+
+      // 2. Double check profile exists (Repair logic if trigger failed or didn't exist)
+      // We'll sign in temporarily or just use the user ID if we have it
+      const userId = data.user?.id;
+      
+      if (userId) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', userId)
+          .single();
+        
+        if (!profile) {
+          console.log(`Repairing missing profile for ${u.username}...`);
+          await supabase.from('profiles').insert({
+            id: userId,
+            username: u.username,
+            fullName: u.fullName,
+            role: u.role,
+            department: u.department,
+            nisn: u.nisn || ''
+          });
+        }
+      }
+
+      console.log(`Checked/Created account for ${u.username}`);
     } catch (err: any) {
-      console.error(err);
+      console.error(`Error for ${u.username}:`, err.message);
     }
   }
 }
