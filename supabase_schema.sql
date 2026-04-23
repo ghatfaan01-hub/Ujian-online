@@ -110,3 +110,29 @@ CREATE POLICY "Users can insert their own results" ON exam_results FOR INSERT WI
 
 DROP POLICY IF EXISTS "Gurus can view all results" ON exam_results;
 CREATE POLICY "Gurus can view all results" ON exam_results FOR SELECT USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'guru')));
+
+-- ==========================================
+-- 4. OTOMATISASI (Trigger User Baru)
+-- ==========================================
+-- Fungsi untuk membuat profil otomatis saat pendaftaran (Auth -> Profiles)
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.profiles (id, username, "fullName", role, department, nisn)
+  VALUES (
+    new.id, 
+    COALESCE(new.raw_user_meta_data->>'username', 'user_' || substr(new.id::text, 1, 8)), 
+    COALESCE(new.raw_user_meta_data->>'fullName', 'Pengguna Baru'), 
+    COALESCE(new.raw_user_meta_data->>'role', 'siswa'), 
+    new.raw_user_meta_data->>'department', 
+    new.raw_user_meta_data->>'nisn'
+  );
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Pasang Trigger
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();

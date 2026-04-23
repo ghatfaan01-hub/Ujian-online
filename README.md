@@ -1,20 +1,45 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# SMK Prima Unggul - Sistem Manajemen Akademik Terpadu
 
-# Run and deploy your AI Studio app
+Aplikasi manajemen sekolah modern dengan fitur Absensi (QR/Lokasi) dan Ujian Kejuruan online.
 
-This contains everything you need to run your app locally.
+## Teknologi Utama
+- **Frontend:** React 18, Vite, Tailwind CSS, Lucide React, Framer Motion
+- **Backend/Database:** Supabase (PostgreSQL, Auth, RLS)
+- **Deployment:** Vercel (Recomended)
 
-View your app in AI Studio: https://ai.studio/apps/19af62b2-e13d-470e-a683-a271fd47e00f
+## Cara Setup (PENTING)
 
-## Run Locally
+### 1. Konfigurasi Database (Supabase)
+1. Buat proyek baru di [Supabase Dashboard](https://supabase.com).
+2. Pergi ke **SQL Editor**.
+3. Salin dan tempel isi dari file `supabase_schema.sql` (ada di root folder ini).
+4. Klik **Run**. Ini akan membuat tabel, trigger profil otomatis, dan aturan keamanan (RLS).
 
-**Prerequisites:**  Node.js
+### 2. Pengaturan Authentication
+1. Di dashboard Supabase, masuk ke **Authentication** -> **Providers**.
+2. Cari **Email**.
+3. Matikan **"Confirm Email"** agar akun demo bisa langsung login tanpa verifikasi email.
 
+### 3. Environment Variables
+Buat file `.env` (atau isi di Secrets Vercel/AI Studio):
+```env
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-public-key
+```
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### 4. Instalasi Lokal
+```bash
+npm install
+npm run dev
+```
+
+## Fitur Unggulan
+- **Dashboard Multi-Role:** Admin, Guru, dan Siswa.
+- **Sistem Absensi:** Pencatatan kehadiran real-time.
+- **Ujian Kejuruan:** 30 soal per jurusan (TKJ, DKV, AK, BC, MPLB, BD).
+- **Bootstrap Data:** Klik tombol "SIAPKAN DATA & AKUN DEMO" di halaman login untuk mengisi data awal.
+
+## Pengguna Demo Bawaan
+- **Admin:** `admin` / `password123`
+- **Guru:** `guru_tkj` / `password123`
+- **Siswa (TKJ):** `siswa_tkj` / `password123` (NISN: 1122334455 / Jurusan: TKJ)
