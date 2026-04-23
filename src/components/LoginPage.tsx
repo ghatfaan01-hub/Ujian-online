@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { GraduationCap, Lock, User, AlertCircle, BookOpen, Fingerprint, Database, Loader2 } from 'lucide-react';
+import { GraduationCap, Lock, User, AlertCircle, BookOpen, Fingerprint, Database, Loader2, MapPin, Clock as ClockIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
-
 import { seedExams, createTestAccounts } from '../services/seedService';
 
 export default function LoginPage() {
@@ -16,7 +15,26 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formattedDate = new Intl.DateTimeFormat('id-ID', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  }).format(currentTime);
+
+  const formattedTime = currentTime.toLocaleTimeString('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
 
   const handleBootstrap = async () => {
     if (!supabase) return;
@@ -44,7 +62,6 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // In Supabase, we can sign in with email. We'll use the same email pattern.
       const email = username.includes('@') ? username : `${username}@smkprima.sch.id`;
       
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
@@ -54,7 +71,6 @@ export default function LoginPage() {
 
       if (authError) throw authError;
 
-      // Check profile
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -65,7 +81,6 @@ export default function LoginPage() {
         throw new Error('Profil pengguna tidak ditemukan di database.');
       }
 
-      // Validation for role-specific fields
       if (role === 'siswa') {
         if (profile.role !== 'siswa' && profile.role !== 'admin') {
           throw new Error('Akun ini bukan akun siswa.');
@@ -93,207 +108,247 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+    <div className="min-h-screen flex items-center justify-center bg-[#f8f9fa] p-4 perspective-1000">
+      {/* Background 3D Floating Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <motion.div 
+          animate={{ y: [0, -20, 0], rotate: [0, 5, 0] }}
+          transition={{ duration: 5, repeat: Infinity }}
+          className="absolute top-20 left-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl"
+        />
+        <motion.div 
+          animate={{ y: [0, 20, 0], rotate: [0, -5, 0] }}
+          transition={{ duration: 7, repeat: Infinity }}
+          className="absolute bottom-20 right-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl"
+        />
+      </div>
+
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl p-8 md:p-10 relative overflow-hidden"
+        initial={{ opacity: 0, rotateX: 20, y: 50, scale: 0.9 }}
+        animate={{ opacity: 1, rotateX: 0, y: 0, scale: 1 }}
+        transition={{ duration: 0.8, type: "spring" }}
+        className="w-full max-w-lg bg-white rounded-[3rem] shadow-[0_50px_100px_-20px_rgba(200,0,0,0.15)] p-1 md:p-2 relative z-10 border border-white"
       >
-        <div className="absolute top-0 left-0 w-full h-2 bg-primary"></div>
-        
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-red-50 text-primary rounded-2xl flex items-center justify-center mb-4">
-            <GraduationCap size={32} />
+        <div className="bg-white rounded-[2.8rem] p-8 md:p-12 border border-gray-100/50 shadow-inner">
+          {/* Top Info Bar */}
+          <div className="flex flex-wrap justify-between items-center gap-4 mb-10 border-b border-gray-50 pb-6 px-2">
+            <div className="flex items-center gap-2 text-gray-500">
+              <MapPin size={16} className="text-primary" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Kota Tangerang Selatan</span>
+            </div>
+            <div className="flex items-center gap-3 bg-gray-50 px-4 py-2 rounded-2xl">
+              <ClockIcon size={14} className="text-primary" />
+              <div className="flex flex-col">
+                <span className="text-[11px] font-bold text-gray-900 leading-none">{formattedTime}</span>
+                <span className="text-[8px] font-bold text-gray-400 leading-none mt-1">{formattedDate}</span>
+              </div>
+            </div>
           </div>
-          <h1 className="text-2xl font-black text-gray-900 tracking-tight">SMK Prima Unggul</h1>
-          <p className="text-gray-500 font-medium tracking-tight">Pintu Masuk Sistem Akademik</p>
-        </div>
-
-        {/* Role Switcher */}
-        <div className="flex p-1 bg-gray-100 rounded-2xl mb-8">
-          <button 
-            type="button"
-            onClick={() => { setRole('siswa'); setError(''); }}
-            className={cn(
-              "flex-1 py-3 rounded-xl text-sm font-bold transition-all",
-              role === 'siswa' ? "bg-white text-primary shadow-sm" : "text-gray-500 hover:text-gray-700"
-            )}
-          >
-            Siswa (NISN)
-          </button>
-          <button 
-            type="button"
-            onClick={() => { setRole('guru'); setError(''); }}
-            className={cn(
-              "flex-1 py-3 rounded-xl text-sm font-bold transition-all",
-              role === 'guru' ? "bg-white text-primary shadow-sm" : "text-gray-500 hover:text-gray-700"
-            )}
-          >
-            Guru / Staff
-          </button>
-        </div>
-
-        <AnimatePresence mode="wait">
-          {error && (
+          
+          <div className="flex flex-col items-center mb-10">
             <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+              whileHover={{ rotateY: 180 }}
+              transition={{ duration: 0.6 }}
+              className="w-24 h-24 bg-primary text-white rounded-[2rem] flex items-center justify-center mb-6 shadow-2xl shadow-red-200 preserve-3d"
+            >
+              <GraduationCap size={48} />
+            </motion.div>
+            <h1 className="text-4xl font-black text-gray-900 tracking-tight text-center leading-none">SMK PRIMA UNGGUL</h1>
+            <p className="text-xs font-bold text-primary uppercase tracking-[0.3em] mt-3 bg-red-50 px-4 py-1.5 rounded-full">Official Portal</p>
+          </div>
+
+          <div className="flex p-1.5 bg-gray-100/80 rounded-[1.5rem] mb-10 backdrop-blur-sm">
+            <button 
+              type="button"
+              onClick={() => { setRole('siswa'); setError(''); }}
               className={cn(
-                "mb-6 p-5 rounded-2xl flex flex-col gap-3 border shadow-sm",
-                error.includes('Konfigurasi') 
-                  ? "bg-orange-50 border-orange-100 text-orange-900" 
-                  : "bg-red-50 border-red-100 text-red-900"
+                "flex-1 py-4 rounded-[1.2rem] text-sm font-black transition-all transform",
+                role === 'siswa' ? "bg-white text-primary shadow-xl scale-100" : "text-gray-500 hover:text-gray-700 scale-95 opacity-60"
               )}
             >
-              <div className="flex items-center gap-3">
-                <AlertCircle className={error.includes('Konfigurasi') ? "text-orange-600" : "text-red-600"} size={20} />
-                <span className="text-xs font-bold uppercase tracking-wider">
-                  {error.includes('Konfigurasi') ? 'Konfigurasi Diperlukan' : 'Terjadi Kesalahan'}
-                </span>
-              </div>
-              <p className="text-[11px] leading-relaxed font-semibold opacity-80">{error}</p>
-              
-              {error.includes('Konfigurasi') && (
-                <div className="mt-2 p-3 bg-white/60 rounded-xl border border-orange-200/50">
-                  <p className="text-[10px] font-black text-orange-800 uppercase mb-2">Panduan Pengaturan:</p>
-                  <ol className="text-[10px] list-decimal list-inside space-y-1.5 text-orange-700 font-bold">
-                    <li>Dapatkan URL & Key di Dashboard Supabase</li>
-                    <li>Buka <b>Settings &rarr; Secrets</b> di AI Studio/Vercel</li>
-                    <li>Tambahkan <b>VITE_SUPABASE_URL</b></li>
-                    <li>Tambahkan <b>VITE_SUPABASE_ANON_KEY</b></li>
-                    <li>Refresh halaman dan coba lagi</li>
-                  </ol>
-                </div>
+              Portal Siswa
+            </button>
+            <button 
+              type="button"
+              onClick={() => { setRole('guru'); setError(''); }}
+              className={cn(
+                "flex-1 py-4 rounded-[1.2rem] text-sm font-black transition-all transform",
+                role === 'guru' ? "bg-white text-primary shadow-xl scale-100" : "text-gray-500 hover:text-gray-700 scale-95 opacity-60"
               )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <form onSubmit={handleLogin} className="space-y-5">
-          <div>
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">Username</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
-                <User size={18} />
-              </div>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="block w-full pl-12 pr-4 py-4 bg-gray-50 border-transparent focus:bg-white focus:ring-2 focus:ring-primary focus:border-transparent rounded-2xl transition-all font-semibold"
-                placeholder="Ex: budi_prima"
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">Password</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
-                <Lock size={18} />
-              </div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="block w-full pl-12 pr-4 py-4 bg-gray-50 border-transparent focus:bg-white focus:ring-2 focus:ring-primary focus:border-transparent rounded-2xl transition-all font-semibold"
-                placeholder="••••••••"
-                required
-              />
-            </div>
+            >
+              Guru & Staff
+            </button>
           </div>
 
           <AnimatePresence mode="wait">
-            {role === 'siswa' && (
-              <motion.div
-                key="siswa-fields"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="space-y-5 overflow-hidden"
+            {error && (
+              <motion.div 
+                initial={{ opacity: 0, y: -20, scale: 0.5 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.5 }}
+                className={cn(
+                  "mb-8 p-6 rounded-3xl flex flex-col gap-3 border shadow-2xl",
+                  error.includes('Konfigurasi') 
+                    ? "bg-orange-50 border-orange-200 text-orange-900 shadow-orange-100" 
+                    : "bg-red-50 border-red-200 text-red-900 shadow-red-100"
+                )}
               >
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">NISN Siswa</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
-                      <Fingerprint size={18} />
-                    </div>
-                    <input
-                      type="text"
-                      value={nisn}
-                      onChange={(e) => setNisn(e.target.value)}
-                      className="block w-full pl-12 pr-4 py-4 bg-gray-50 border-transparent focus:bg-white focus:ring-2 focus:ring-primary focus:border-transparent rounded-2xl transition-all font-semibold"
-                      placeholder="Masukkan 10 digit NISN"
-                      required
-                    />
-                  </div>
+                <div className="flex items-center gap-3">
+                  <AlertCircle className={error.includes('Konfigurasi') ? "text-orange-600" : "text-red-600"} size={22} />
+                  <span className="text-xs font-black uppercase tracking-wider">
+                    {error.includes('Konfigurasi') ? 'KONFIGURASI DIPERLUKAN' : 'AKSES DITOLAK'}
+                  </span>
                 </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">Jurusan</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
-                      <BookOpen size={18} />
-                    </div>
-                    <select
-                      value={jurusan}
-                      onChange={(e) => setJurusan(e.target.value)}
-                      className="block w-full pl-12 pr-4 py-4 bg-gray-50 border-transparent focus:bg-white focus:ring-2 focus:ring-primary focus:border-transparent rounded-2xl appearance-none transition-all font-semibold"
-                      required
-                    >
-                      <option value="">Pilih Jurusan</option>
-                      <option value="TKJ">Teknik Komputer Jaringan (TKJ)</option>
-                      <option value="DKV">Desain Komunikasi Visual (DKV)</option>
-                      <option value="AK">Akuntansi (AK)</option>
-                      <option value="BC">Broadcasting (BC)</option>
-                      <option value="MPLB">Manajemen Perkantoran (MPLB)</option>
-                      <option value="BD">Bisnis Digital (BD)</option>
-                    </select>
+                <p className="text-[11px] leading-relaxed font-bold opacity-80">{error}</p>
+                
+                {error.includes('Konfigurasi') && (
+                  <div className="mt-2 p-4 bg-white/80 rounded-2xl border border-orange-200/50">
+                    <p className="text-[10px] font-black text-orange-800 uppercase mb-3">PANDUAN ADMIN SISTEM:</p>
+                    <ol className="text-[10px] list-decimal list-inside space-y-2 text-orange-700 font-black">
+                      <li>Buka Dashboard Supabase &rarr; API Settings</li>
+                      <li>Copy <span className="bg-orange-100 px-1">Project URL</span> & <span className="bg-orange-100 px-1">Anon Key</span></li>
+                      <li>Buka <span className="bg-orange-100 px-1">Settings &rarr; Secrets</span> di AI Studio</li>
+                      <li>Masukkan <span className="text-orange-900">VITE_SUPABASE_URL</span></li>
+                      <li>Masukkan <span className="text-orange-900">VITE_SUPABASE_ANON_KEY</span></li>
+                    </ol>
                   </div>
-                </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-4 bg-primary text-white rounded-2xl font-black text-lg hover:bg-primary-dark transition-all shadow-xl shadow-red-100 flex items-center justify-center gap-3 active:scale-95"
-          >
-            {loading ? (
-              <>
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div className="space-y-2">
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] px-2">Autentikasi User</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-gray-400 group-focus-within:text-primary transition-colors">
+                  <User size={20} />
+                </div>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="block w-full pl-14 pr-6 py-5 bg-gray-50 border-2 border-transparent focus:bg-white focus:ring-0 focus:border-primary/20 rounded-[1.8rem] transition-all font-bold placeholder:text-gray-300 shadow-sm"
+                  placeholder="Username / ID User"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] px-2">Kata Sandi</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-gray-400 group-focus-within:text-primary transition-colors">
+                  <Lock size={20} />
+                </div>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="block w-full pl-14 pr-6 py-5 bg-gray-50 border-2 border-transparent focus:bg-white focus:ring-0 focus:border-primary/20 rounded-[1.8rem] transition-all font-bold placeholder:text-gray-300 shadow-sm"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+            </div>
+
+            <AnimatePresence mode="wait">
+              {role === 'siswa' && (
+                <motion.div
+                  key="siswa-fields"
+                  initial={{ opacity: 0, height: 0, y: 20 }}
+                  animate={{ opacity: 1, height: 'auto', y: 0 }}
+                  exit={{ opacity: 0, height: 0, y: 20 }}
+                  className="space-y-6 overflow-hidden"
+                >
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] px-2">Nomor Induk (NISN)</label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-gray-400 group-focus-within:text-primary transition-colors">
+                        <Fingerprint size={20} />
+                      </div>
+                      <input
+                        type="text"
+                        value={nisn}
+                        onChange={(e) => setNisn(e.target.value)}
+                        className="block w-full pl-14 pr-6 py-5 bg-gray-50 border-2 border-transparent focus:bg-white focus:ring-0 focus:border-primary/20 rounded-[1.8rem] transition-all font-bold placeholder:text-gray-300"
+                        placeholder="10 Digit NISN"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] px-2">Program Studi</label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-gray-400 group-focus-within:text-primary transition-colors">
+                        <BookOpen size={20} />
+                      </div>
+                      <select
+                        value={jurusan}
+                        onChange={(e) => setJurusan(e.target.value)}
+                        className="block w-full pl-14 pr-6 py-5 bg-gray-50 border-2 border-transparent focus:bg-white focus:ring-0 focus:border-primary/20 rounded-[1.8rem] appearance-none transition-all font-bold shadow-sm cursor-pointer"
+                        required
+                      >
+                        <option value="">Pilih Jurusan Anda</option>
+                        <option value="TKJ">Teknik Komputer Jaringan</option>
+                        <option value="DKV">Desain Komunikasi Visual</option>
+                        <option value="AK">Akuntansi Keuangan</option>
+                        <option value="BC">Broadcasting & TV</option>
+                        <option value="MPLB">Manajemen Perkantoran</option>
+                        <option value="BD">Bisnis Digital</option>
+                      </select>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <motion.button
+              whileHover={{ scale: 1.02, translateY: -5 }}
+              whileTap={{ scale: 0.98 }}
+              type="submit"
+              disabled={loading}
+              className="w-full py-6 bg-primary text-white rounded-[2rem] font-black text-lg hover:bg-primary-dark transition-all shadow-2xl shadow-red-200 flex items-center justify-center gap-4 disabled:opacity-50 relative overflow-hidden group"
+            >
+              <div className="absolute inset-0 bg-white/20 transform translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+              {loading ? (
+                <>
+                  <motion.div 
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                    className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full"
+                  />
+                  <span>PROSES VERIFIKASI...</span>
+                </>
+              ) : (
+                <>
+                  <Fingerprint size={24} />
+                  <span>MASUK SEKARANG</span>
+                </>
+              )}
+            </motion.button>
+          </form>
+
+          <div className="mt-12 pt-10 border-t border-gray-100 flex flex-col items-center gap-4 text-center">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Administrator Portal</p>
+            <motion.button 
+              whileHover={{ scale: 1.05 }}
+              onClick={handleBootstrap}
+              disabled={bootstrapping}
+              className="flex items-center gap-3 px-8 py-3 bg-gray-900 text-white rounded-2xl font-black text-[10px] tracking-widest hover:bg-black transition-all shadow-xl shadow-gray-200 disabled:opacity-50"
+            >
+              {bootstrapping ? (
                 <motion.div 
                   animate={{ rotate: 360 }}
                   transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                  className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                  className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
                 />
-                Verifikasi...
-              </>
-            ) : (
-              'Masuk Sekarang'
-            )}
-          </button>
-        </form>
-
-        <div className="mt-8 pt-8 border-t border-gray-100 text-center">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Baru Pertama Kali?</p>
-          <button 
-            type="button"
-            onClick={handleBootstrap}
-            disabled={bootstrapping}
-            className="flex items-center justify-center gap-2 w-full py-3 bg-gray-50 text-gray-900 rounded-xl font-bold text-xs hover:bg-gray-100 transition-colors disabled:opacity-50"
-          >
-            {bootstrapping ? (
-              <motion.div 
-                animate={{ rotate: 360 }}
-                transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                className="w-4 h-4 border-2 border-gray-300 border-t-primary rounded-full"
-              />
-            ) : <Database size={14} />}
-            SIAPKAN DATA & AKUN DEMO
-          </button>
+              ) : <Database size={14} />}
+              SIAPKAN INSTALASI DATA AWAL
+            </motion.button>
+            <p className="text-[9px] font-bold text-gray-300 italic max-w-[200px]">Hak Cipta © 2024 SMK Prima Unggul. Dikembangkan untuk Keunggulan Akademik.</p>
+          </div>
         </div>
       </motion.div>
     </div>
