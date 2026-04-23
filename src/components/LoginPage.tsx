@@ -18,6 +18,12 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!supabase) {
+      setError('Konfigurasi Supabase belum disiapkan. Silakan atur VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY di Secrets.');
+      return;
+    }
+
     setLoading(true);
 
     try {

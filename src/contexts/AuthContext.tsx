@@ -47,6 +47,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
     // Check active sessions and sets up the listener
     supabase.auth.getSession().then(({ data: { session } }) => {
       const currentUser = session?.user ?? null;

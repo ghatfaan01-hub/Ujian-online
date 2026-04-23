@@ -1,4 +1,5 @@
 -- SMK Prima Unggul Database Schema (PostgreSQL for Supabase)
+-- Idempotent script: can be run multiple times safely
 
 -- 1. Users Table
 CREATE TABLE IF NOT EXISTS public.profiles (
@@ -67,18 +68,42 @@ ALTER TABLE public.exams ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.questions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.exam_results ENABLE ROW LEVEL SECURITY;
 
--- Basic Policies (Adjust as needed)
+-- Basic Policies (Clean and Recreate)
+
+-- Profiles
+DROP POLICY IF EXISTS "Users can view their own profile" ON profiles;
 CREATE POLICY "Users can view their own profile" ON profiles FOR SELECT USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Users can update their own profile" ON profiles;
 CREATE POLICY "Users can update their own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Admins can view all profiles" ON profiles;
 CREATE POLICY "Admins can view all profiles" ON profiles FOR SELECT USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
 
+-- Attendance
+DROP POLICY IF EXISTS "Users can view their own attendance" ON attendance;
 CREATE POLICY "Users can view their own attendance" ON attendance FOR SELECT USING (auth.uid() = userId);
+
+DROP POLICY IF EXISTS "Users can create their own attendance" ON attendance;
 CREATE POLICY "Users can create their own attendance" ON attendance FOR INSERT WITH CHECK (auth.uid() = userId);
+
+DROP POLICY IF EXISTS "Gurus can view all attendance" ON attendance;
 CREATE POLICY "Gurus can view all attendance" ON attendance FOR SELECT USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'guru', 'staff')));
 
+-- Exams
+DROP POLICY IF EXISTS "Anyone authenticated can view exams" ON exams;
 CREATE POLICY "Anyone authenticated can view exams" ON exams FOR SELECT USING (auth.role() = 'authenticated');
+
+-- Questions
+DROP POLICY IF EXISTS "Anyone authenticated can view questions" ON questions;
 CREATE POLICY "Anyone authenticated can view questions" ON questions FOR SELECT USING (auth.role() = 'authenticated');
 
+-- Exam Results
+DROP POLICY IF EXISTS "Users can view their own exam results" ON exam_results;
 CREATE POLICY "Users can view their own exam results" ON exam_results FOR SELECT USING (auth.uid() = studentId);
+
+DROP POLICY IF EXISTS "Users can insert their own results" ON exam_results;
 CREATE POLICY "Users can insert their own results" ON exam_results FOR INSERT WITH CHECK (auth.uid() = studentId);
+
+DROP POLICY IF EXISTS "Gurus can view all results" ON exam_results;
 CREATE POLICY "Gurus can view all results" ON exam_results FOR SELECT USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'guru')));
