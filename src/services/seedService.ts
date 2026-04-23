@@ -5,12 +5,13 @@ export async function createTestAccounts() {
     { username: 'admin', password: 'password123', role: 'admin', fullName: 'Administrator Utama', department: 'Umum' },
     { username: 'guru_tkj', password: 'password123', role: 'guru', fullName: 'Bpk. Wijaya, S.Kom', department: 'TKJ' },
     { username: 'siswa_tkj', password: 'password123', role: 'siswa', fullName: 'Budi Santoso', department: 'TKJ', nisn: '1122334455' },
-    { username: 'siswa_dkv', password: 'password123', role: 'siswa', fullName: 'Siti Aminah', department: 'DKV', nisn: '5544332211' }
+    { username: 'siswa_dkv', password: 'password123', role: 'siswa', fullName: 'Siti Aminah', department: 'DKV', nisn: '5544332211' },
+    { username: 'siswa', password: 'pu123', role: 'siswa', fullName: 'Siswa Percobaan', department: 'TKJ', nisn: '0011223344', customEmail: 'siswa@smkpu.id' }
   ];
 
   for (const u of testUsers) {
     try {
-      const email = `${u.username}@smkprima.sch.id`;
+      const email = u.customEmail || `${u.username}@smkprima.sch.id`;
       
       // 1. Sign up user (or get existing)
       const { data, error } = await supabase.auth.signUp({

@@ -71,14 +71,33 @@ export default function LoginPage() {
 
       if (authError) throw authError;
 
-      const { data: profile, error: profileError } = await supabase
+      let { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', authData.user?.id)
         .single();
       
-      if (profileError || !profile) {
-        throw new Error('Profil pengguna tidak ditemukan di database.');
+      // AUTO-REPAIR: If profile missing but login successful, create it now
+      if (!profile || profileError) {
+        console.log('Profile missing, attempting auto-repair...');
+        const { data: newProfile, error: repairError } = await supabase
+          .from('profiles')
+          .insert({
+            id: authData.user?.id,
+            username: username.split('@')[0],
+            fullName: username.split('@')[0].toUpperCase(),
+            role: role,
+            department: role === 'siswa' ? (jurusan || 'Umum') : 'Umum',
+            nisn: role === 'siswa' ? (nisn || '0000000000') : ''
+          })
+          .select()
+          .single();
+          
+        if (repairError) {
+          console.error('Repair failed:', repairError);
+          throw new Error('Profil anda belum terdaftar di sistem. Silakan hubungi operator sekolah.');
+        }
+        profile = newProfile;
       }
 
       if (role === 'siswa') {
