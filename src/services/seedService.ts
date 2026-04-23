@@ -14,30 +14,23 @@ export async function createTestAccounts() {
       const { data, error } = await supabase.auth.signUp({
         email,
         password: u.password,
+        options: {
+          data: {
+            username: u.username,
+            fullName: u.fullName,
+            role: u.role,
+            department: u.department,
+            nisn: u.nisn || ''
+          }
+        }
       });
 
       if (error) {
-        if (error.message.includes('already registered')) {
-          console.log(`Account ${u.username} already exists.`);
-        } else {
-          throw error;
+        if (error.message.includes('already registered') || error.message.includes('Database error')) {
+          console.log(`Account ${u.username} already exists or has conflict.`);
+          continue;
         }
-      }
-
-      if (data.user) {
-        // Create profile
-        const { error: pError } = await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            username: u.username,
-            role: u.role,
-            fullName: u.fullName,
-            department: u.department,
-            nisn: u.nisn || ''
-          });
-        
-        if (pError) console.error('Error creating profile:', pError);
+        throw error;
       }
       console.log(`Created account for ${u.username}`);
     } catch (err: any) {

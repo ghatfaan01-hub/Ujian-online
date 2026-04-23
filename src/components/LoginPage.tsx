@@ -116,16 +116,42 @@ export default function LoginPage() {
           </button>
         </div>
 
-        {error && (
-          <motion.div 
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="mb-6 p-4 bg-red-50 text-primary text-xs font-bold rounded-xl flex items-center gap-3 border border-red-100"
-          >
-            <AlertCircle size={18} />
-            <span>{error}</span>
-          </motion.div>
-        )}
+        <AnimatePresence mode="wait">
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className={cn(
+                "mb-6 p-5 rounded-2xl flex flex-col gap-3 border shadow-sm",
+                error.includes('Konfigurasi') 
+                  ? "bg-orange-50 border-orange-100 text-orange-900" 
+                  : "bg-red-50 border-red-100 text-red-900"
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <AlertCircle className={error.includes('Konfigurasi') ? "text-orange-600" : "text-red-600"} size={20} />
+                <span className="text-xs font-bold uppercase tracking-wider">
+                  {error.includes('Konfigurasi') ? 'Konfigurasi Diperlukan' : 'Terjadi Kesalahan'}
+                </span>
+              </div>
+              <p className="text-[11px] leading-relaxed font-semibold opacity-80">{error}</p>
+              
+              {error.includes('Konfigurasi') && (
+                <div className="mt-2 p-3 bg-white/60 rounded-xl border border-orange-200/50">
+                  <p className="text-[10px] font-black text-orange-800 uppercase mb-2">Panduan Pengaturan:</p>
+                  <ol className="text-[10px] list-decimal list-inside space-y-1.5 text-orange-700 font-bold">
+                    <li>Dapatkan URL & Key di Dashboard Supabase</li>
+                    <li>Buka <b>Settings &rarr; Secrets</b> di AI Studio/Vercel</li>
+                    <li>Tambahkan <b>VITE_SUPABASE_URL</b></li>
+                    <li>Tambahkan <b>VITE_SUPABASE_ANON_KEY</b></li>
+                    <li>Refresh halaman dan coba lagi</li>
+                  </ol>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
