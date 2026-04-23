@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { db } from '../lib/firebase';
-import { collection, addDoc, serverTimestamp, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
+import { supabase } from '../lib/supabase';
 import { MapPin, Clock, CheckCircle, AlertTriangle, UserCheck, Users } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
@@ -9,47 +8,53 @@ import { useNavigate } from 'react-router-dom';
 export default function Attendance() {
   const { profile, user, isGuru, isStaff } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
   const [history, setHistory] = useState<any[]>([]);
-  const [targetType, setTargetType] = useState('karyawan'); // karyawan or siswa (for guru)
   const navigate = useNavigate();
   
   const today = new Date().toISOString().split('T')[0];
 
   useEffect(() => {
     fetchHistory();
-  }, [user, targetType]);
+  }, [user]);
 
   const fetchHistory = async () => {
     if (!user) return;
-    const q = query(
-      collection(db, 'attendance'),
-      where('userId', '==', user.uid),
-      orderBy('timestamp', 'desc'),
-      limit(5)
-    );
-    const snap = await getDocs(q);
-    setHistory(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    try {
+      const { data, error } = await supabase
+        .from('attendance')
+        .select('*')
+        .eq('userId', user.id)
+        .order('timestamp', { ascending: false })
+        .limit(5);
+      
+      if (error) throw error;
+      setHistory(data || []);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleClockIn = async (status: string) => {
     if (!user || !profile) return;
     setLoading(true);
     try {
-      await addDoc(collection(db, 'attendance'), {
-        userId: user.uid,
-        targetId: user.uid,
-        type: 'karyawan',
-        status,
-        date: today,
-        timestamp: serverTimestamp(),
-        location: 'Tangerang Selatan',
-        fullName: profile.fullName
-      });
-      setStatus(status);
+      const { error } = await supabase
+        .from('attendance')
+        .insert({
+          userId: user.id,
+          targetId: user.id,
+          type: 'karyawan',
+          status,
+          date: today,
+          location: 'Tangerang Selatan',
+          fullName: profile.fullName
+        });
+
+      if (error) throw error;
       fetchHistory();
     } catch (err) {
       console.error(err);
+      alert('Gagal mengirim absensi.');
     } finally {
       setLoading(false);
     }
@@ -143,7 +148,7 @@ export default function Attendance() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-bold text-gray-900">
-                    {item.timestamp?.toDate ? item.timestamp.toDate().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '...'}
+                    {item.timestamp ? new Date(item.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '...'}
                   </p>
                 </div>
               </div>

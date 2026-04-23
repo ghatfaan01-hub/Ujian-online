@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../lib/firebase';
-import { collection, query, getDocs, where, orderBy } from 'firebase/firestore';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { History, Filter, Download, UserCheck, Search, Award } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -19,17 +18,22 @@ export default function AttendanceRecords() {
   const fetchData = async () => {
     try {
       if (activeTab === 'attendance') {
-        const q = query(collection(db, 'attendance'), orderBy('timestamp', 'desc'));
-        const snap = await getDocs(q);
-        setRecords(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const { data, error } = await supabase
+          .from('attendance')
+          .select('*')
+          .order('timestamp', { ascending: false });
+        
+        if (error) throw error;
+        setRecords(data || []);
       } else {
-        const q = query(
-          collection(db, 'examResults'), 
-          where('department', '==', profile?.department),
-          orderBy('submittedAt', 'desc')
-        );
-        const snap = await getDocs(q);
-        setExamResults(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const { data, error } = await supabase
+          .from('exam_results')
+          .select('*')
+          .eq('department', profile?.department)
+          .order('submittedAt', { ascending: false });
+        
+        if (error) throw error;
+        setExamResults(data || []);
       }
     } catch (err) {
       console.error(err);
@@ -138,9 +142,9 @@ export default function AttendanceRecords() {
                     <td className="px-8 py-5">
                       <span className={cn(
                         "px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider",
-                        e.score >= 50 ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
+                        e.score >= 70 ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
                       )}>
-                        {e.score >= 50 ? "Lulus" : "Tidak Lulus"}
+                        {e.score >= 70 ? "Lulus" : "Tidak Lulus"}
                       </span>
                     </td>
                   </tr>

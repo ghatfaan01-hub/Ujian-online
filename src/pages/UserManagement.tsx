@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../lib/firebase';
-import { collection, query, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { UserPlus, Search, MoreVertical, Trash2, Edit2, ShieldCheck, Mail, User } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -16,9 +15,13 @@ export default function UserManagement() {
 
   const fetchUsers = async () => {
     try {
-      const q = query(collection(db, 'users'));
-      const snap = await getDocs(q);
-      setUsers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('fullName', { ascending: true });
+      
+      if (error) throw error;
+      setUsers(data || []);
     } catch (err) {
       console.error(err);
     } finally {

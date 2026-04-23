@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { db } from '../lib/firebase';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { supabase } from '../lib/supabase';
 import { BookOpen, Clock, Award, ShieldAlert, ChevronRight, PlayCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -18,13 +17,14 @@ export default function ExamList() {
 
   const fetchExams = async () => {
     try {
-      const q = query(
-        collection(db, 'exams'),
-        where('department', 'in', [profile?.department, 'Umum']),
-        orderBy('title', 'asc')
-      );
-      const snap = await getDocs(q);
-      setExams(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const { data, error } = await supabase
+        .from('exams')
+        .select('*')
+        .in('department', [profile?.department, 'Umum'])
+        .order('title', { ascending: true });
+      
+      if (error) throw error;
+      setExams(data || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -83,7 +83,7 @@ export default function ExamList() {
                     </div>
                     <div className="flex items-center justify-center md:justify-start gap-4 text-xs font-semibold text-gray-400">
                       <span className="flex items-center gap-1"><Clock size={14} /> 60 Menit</span>
-                      <span className="flex items-center gap-1"><Award size={14} /> KKM: {exam.kkm || 50}</span>
+                      <span className="flex items-center gap-1"><Award size={14} /> KKM: {exam.kkm || 70}</span>
                     </div>
                   </div>
                   <button 
@@ -121,7 +121,7 @@ export default function ExamList() {
                   <div className="w-6 h-6 bg-white/10 rounded-full flex items-center justify-center shrink-0 mt-0.5">
                     <span className="text-[10px] font-bold text-white">!</span>
                   </div>
-                  <p className="text-xs text-white/70 leading-relaxed">Nilai minimal kelulusan (KKM) adalah 50 poin.</p>
+                  <p className="text-xs text-white/70 leading-relaxed">Nilai minimal kelulusan (KKM) adalah 70 poin.</p>
                 </li>
               </ul>
             </div>

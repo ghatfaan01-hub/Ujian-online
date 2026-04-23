@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { db } from '../lib/firebase';
-import { collection, query, getDocs, doc, getDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { Clock, CheckCircle, ChevronRight, ChevronLeft, AlertCircle, Award } from 'lucide-react';
@@ -27,17 +26,26 @@ export default function ExamSession() {
   const fetchExamAndQuestions = async () => {
     if (!id) return;
     try {
-      const examSnap = await getDoc(doc(db, 'exams', id));
-      if (!examSnap.exists()) {
+      const { data: examData, error: examError } = await supabase
+        .from('exams')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (examError || !examData) {
         navigate('/app/exams');
         return;
       }
-      setExam({ id: examSnap.id, ...examSnap.data() });
+      setExam(examData);
 
-      const qSnap = await getDocs(collection(db, 'exams', id, 'questions'));
-      const qList = qSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      // Shuffle or limit to 30 if more exist
-      setQuestions(qList.slice(0, 30));
+      const { data: qData, error: qError } = await supabase
+        .from('questions')
+        .select('*')
+        .eq('examId', id)
+        .order('id', { ascending: true });
+      
+      if (qError) throw qError;
+      setQuestions((qData || []).slice(0, 30));
     } catch (err) {
       console.error(err);
     } finally {
@@ -55,27 +63,31 @@ export default function ExamSession() {
 
     let correctCount = 0;
     questions.forEach((q, idx) => {
+      // Supabase stores as integer directly if not using JSONB, 
+      // but if we used JSONB for options, correctOption is a number field.
       if (answers[idx] === q.correctOption) {
         correctCount++;
       }
     });
 
     const finalScore = Math.round((correctCount / questions.length) * 100);
-    const passed = finalScore >= (exam.kkm || 50);
+    const passed = finalScore >= (exam.kkm || 70);
 
     try {
-      await addDoc(collection(db, 'examResults'), {
-        studentId: user?.uid,
-        studentName: profile?.fullName,
-        nisn: profile?.nisn || '',
-        examId: exam.id,
-        examTitle: exam.title,
-        score: finalScore,
-        status: passed ? 'lulus' : 'tidak_lulus',
-        submittedAt: serverTimestamp(),
-        department: profile?.department
-      });
+      const { error } = await supabase
+        .from('exam_results')
+        .insert({
+          studentId: user?.id,
+          studentName: profile?.fullName,
+          nisn: profile?.nisn || '',
+          examId: exam.id,
+          examTitle: exam.title,
+          score: finalScore,
+          status: passed ? 'lulus' : 'tidak_lulus',
+          department: profile?.department
+        });
 
+      if (error) throw error;
       setScore(finalScore);
       setFinished(true);
     } catch (err) {
@@ -97,7 +109,7 @@ export default function ExamSession() {
       >
         <div className={cn(
           "w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto mb-8",
-          score >= 50 ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
+          score >= 70 ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
         )}>
           <Award size={48} />
         </div>
@@ -109,9 +121,9 @@ export default function ExamSession() {
           <p className="text-7xl font-black text-gray-900 mb-2">{score}</p>
           <div className={cn(
             "inline-block px-4 py-1 rounded-full text-xs font-bold uppercase",
-            score >= 50 ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
+            score >= 70 ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
           )}>
-            {score >= 50 ? "Lulus KKM" : "Tidak Lulus KKM"}
+            {score >= 70 ? "Lulus KKM" : "Tidak Lulus KKM"}
           </div>
         </div>
 

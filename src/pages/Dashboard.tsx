@@ -13,8 +13,7 @@ import {
   UserPlus
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { seedExams, createTestAccounts } from '../services/seedService';
 import { cn } from '../lib/utils';
 
@@ -189,7 +188,7 @@ export default function Dashboard() {
             <AlertCircle className="text-orange-600 mt-1" size={24} />
             <div>
               <p className="font-bold text-orange-900 mb-1">Peringatan KKM</p>
-              <p className="text-xs text-orange-700 leading-relaxed">Nilai minimal kelulusan (KKM) untuk semua jurusan adalah 50. Tetap fokus!</p>
+              <p className="text-xs text-orange-700 leading-relaxed">Nilai minimal kelulusan (KKM) untuk semua jurusan adalah 70. Tetap fokus!</p>
             </div>
           </div>
         </div>

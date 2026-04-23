@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { GraduationCap, Lock, User, AlertCircle, BookOpen, Fingerprint } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -23,56 +21,49 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // In this system, we use email based on username for simplicity with Firebase Auth
+      // In Supabase, we can sign in with email. We'll use the same email pattern.
       const email = username.includes('@') ? username : `${username}@smkprima.sch.id`;
       
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const fbUser = userCredential.user;
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-      // Check if user has profile in Firestore
-      const docRef = doc(db, 'users', fbUser.uid);
-      const docSnap = await getDoc(docRef);
+      if (authError) throw authError;
+
+      // Check profile
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authData.user?.id)
+        .single();
       
-      if (docSnap.exists()) {
-        const profile = docSnap.data();
-        
-        // Validation for role-specific fields
-        if (role === 'siswa') {
-          if (profile.role !== 'siswa' && profile.role !== 'admin') {
-            setError('Akun ini bukan akun siswa.');
-            await auth.signOut();
-            setLoading(false);
-            return;
-          }
-          if (profile.nisn !== nisn && profile.role !== 'admin') {
-            setError('NISN yang anda masukkan tidak sesuai.');
-            await auth.signOut();
-            setLoading(false);
-            return;
-          }
-          if (profile.department !== jurusan && profile.role !== 'admin') {
-            setError('Jurusan yang anda masukkan tidak sesuai.');
-            await auth.signOut();
-            setLoading(false);
-            return;
-          }
-        } else {
-          if (profile.role === 'siswa') {
-            setError('Akun ini bukan akun guru/staff.');
-            await auth.signOut();
-            setLoading(false);
-            return;
-          }
-        }
-
-        navigate('/app');
-      } else {
-        setError('Profil pengguna tidak ditemukan di database.');
-        await auth.signOut();
+      if (profileError || !profile) {
+        throw new Error('Profil pengguna tidak ditemukan di database.');
       }
+
+      // Validation for role-specific fields
+      if (role === 'siswa') {
+        if (profile.role !== 'siswa' && profile.role !== 'admin') {
+          throw new Error('Akun ini bukan akun siswa.');
+        }
+        if (profile.nisn !== nisn && profile.role !== 'admin') {
+          throw new Error('NISN yang anda masukkan tidak sesuai.');
+        }
+        if (profile.department !== jurusan && profile.role !== 'admin') {
+          throw new Error('Jurusan yang anda masukkan tidak sesuai.');
+        }
+      } else {
+        if (profile.role === 'siswa') {
+          throw new Error('Akun ini bukan akun guru/staff.');
+        }
+      }
+
+      navigate('/app');
     } catch (err: any) {
       console.error(err);
-      setError('Gagal masuk. Periksa kembali Username dan Password anda.');
+      setError(err.message || 'Gagal masuk. Periksa kembali data anda.');
+      await supabase.auth.signOut();
     } finally {
       setLoading(false);
     }

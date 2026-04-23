@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { auth } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { 
   LayoutDashboard, 
   Users, 
@@ -20,7 +20,7 @@ export default function AppLayout() {
   const location = useLocation();
 
   const handleLogout = async () => {
-    await auth.signOut();
+    await supabase.auth.signOut();
     navigate('/login');
   };
 

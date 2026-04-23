@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../lib/firebase';
-import { collection, query, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { supabase } from '../lib/supabase';
 import { GraduationCap, UserPlus, Search, Trash2, Edit2, Filter } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -15,9 +14,14 @@ export default function StudentManagement() {
 
   const fetchStudents = async () => {
     try {
-      const q = query(collection(db, 'students'));
-      const snap = await getDocs(q);
-      setStudents(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'siswa')
+        .order('fullName', { ascending: true });
+      
+      if (error) throw error;
+      setStudents(data || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -26,7 +30,7 @@ export default function StudentManagement() {
   };
 
   const filteredStudents = students.filter(s => 
-    s.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    s.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     s.nisn?.includes(searchTerm)
   );
 
@@ -79,16 +83,16 @@ export default function StudentManagement() {
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-red-50 text-primary rounded-2xl flex items-center justify-center font-bold">
-                        {s.name?.charAt(0)}
+                        {s.fullName?.charAt(0)}
                       </div>
-                      <span className="font-bold text-gray-900">{s.name}</span>
+                      <span className="font-bold text-gray-900">{s.fullName}</span>
                     </div>
                   </td>
                   <td className="px-8 py-5 font-mono text-xs font-bold text-gray-400">
                     {s.nisn}
                   </td>
                   <td className="px-8 py-5 font-bold text-gray-900">
-                    {s.class}
+                    {s.class || 'XII'}
                   </td>
                   <td className="px-8 py-5">
                     <span className="px-3 py-1 bg-gray-100 text-[10px] font-black text-gray-500 uppercase rounded-md tracking-wider">

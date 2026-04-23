@@ -1,16 +1,4 @@
-import { 
-  collection, 
-  doc, 
-  setDoc, 
-  getDocs, 
-  getDoc,
-  query,
-  where,
-  addDoc,
-  serverTimestamp
-} from 'firebase/firestore';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { db, auth } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 
 export async function createTestAccounts() {
   const testUsers = [
@@ -23,62 +11,75 @@ export async function createTestAccounts() {
   for (const u of testUsers) {
     try {
       const email = `${u.username}@smkprima.sch.id`;
-      const res = await createUserWithEmailAndPassword(auth, email, u.password);
-      await setDoc(doc(db, 'users', res.user.uid), {
-        uid: res.user.uid,
-        username: u.username,
-        role: u.role,
-        fullName: u.fullName,
-        department: u.department,
-        nisn: u.nisn || '',
-        createdAt: serverTimestamp()
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password: u.password,
       });
+
+      if (error) {
+        if (error.message.includes('already registered')) {
+          console.log(`Account ${u.username} already exists.`);
+        } else {
+          throw error;
+        }
+      }
+
+      if (data.user) {
+        // Create profile
+        const { error: pError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            username: u.username,
+            role: u.role,
+            fullName: u.fullName,
+            department: u.department,
+            nisn: u.nisn || ''
+          });
+        
+        if (pError) console.error('Error creating profile:', pError);
+      }
       console.log(`Created account for ${u.username}`);
     } catch (err: any) {
-      if (err.code === 'auth/email-already-in-use') {
-        console.log(`Account ${u.username} already exists.`);
-      } else {
-        console.error(err);
-      }
+      console.error(err);
     }
   }
 }
 
-export const departmentQuestions: Record<string, any[]> = {
-  "TKJ": [
-    { text: "Apa kepanjangan dari OSI?", options: ["Open System Interconnection", "Open Source Internet", "Optical System Interface", "Original System Input"], correctOption: 0, difficulty: "gampang" },
-    { text: "Protokol yang digunakan untuk mengirim email adalah?", options: ["HTTP", "FTP", "SMTP", "POP3"], correctOption: 2, difficulty: "gampang" },
-    { text: "Berapa jumlah host pada subnet mask /24?", options: ["254", "510", "126", "62"], correctOption: 0, difficulty: "sulit" },
-    // ... more would be added
-  ],
-  "DKV": [
-    { text: "Warna sekunder adalah hasil campuran dari?", options: ["Warna Primer", "Warna Tersier", "Warna Netral", "Hitam dan Putih"], correctOption: 0, difficulty: "gampang" },
-    { text: "Software pengolah gambar berbasis vektor adalah?", options: ["Adobe Photoshop", "Adobe Illustrator", "CorelDraw", "B dan C Benar"], correctOption: 3, difficulty: "gampang" },
-    // ...
-  ]
-};
-
-// I'll create a function to generate 30 questions using Gemini later if needed, 
-// but for a robust app, I'll provide a set of baseline questions.
-
 export async function seedExams() {
   const depts = ["TKJ", "DKV", "AK", "BC", "MPLB", "BD"];
   for (const dept of depts) {
-    const examRef = await addDoc(collection(db, 'exams'), {
-      title: `Ujian Kejuruan ${dept}`,
-      department: dept,
-      kkm: 50,
-      createdAt: new Date(),
-    });
+    const { data: examData, error: examError } = await supabase
+      .from('exams')
+      .insert({
+        title: `Ujian Kejuruan ${dept}`,
+        department: dept,
+        kkm: 70,
+      })
+      .select()
+      .single();
+
+    if (examError) {
+      console.error(examError);
+      continue;
+    }
 
     // Add 30 mock questions for each
+    const questions = [];
     for (let i = 1; i <= 30; i++) {
-      await addDoc(collection(db, 'exams', examRef.id, 'questions'), {
-        text: `Pertanyaan ${i} untuk jurusan ${dept}: Apa yang dimaksud dengan Kompetensi Dasar ${i}?`,
-        options: ["Pilihan A", "Pilihan B", "Pilihan C", "Pilihan D"],
-        correctOption: Math.floor(Math.random() * 4),
+      questions.push({
+        examId: examData.id,
+        text: `Pertanyaan ${i} untuk jurusan ${dept}: Materi Kompetensi Dasar ${i}?`,
+        options: ["Pilihan A (Benar)", "Pilihan B", "Pilihan C", "Pilihan D"],
+        correctOption: 0,
         difficulty: i > 20 ? "sulit" : "gampang"
       });
     }
+
+    const { error: qError } = await supabase
+      .from('questions')
+      .insert(questions);
+    
+    if (qError) console.error(qError);
   }
 }
