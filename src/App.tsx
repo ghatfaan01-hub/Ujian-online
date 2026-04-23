@@ -9,6 +9,7 @@ import Attendance from './pages/Attendance';
 import UserManagement from './pages/UserManagement';
 import ExamList from './pages/ExamList';
 import ExamSession from './pages/ExamSession';
+import ExamResults from './pages/ExamResults';
 import StudentManagement from './pages/StudentManagement';
 import AttendanceRecords from './pages/AttendanceRecords';
 
@@ -43,6 +44,7 @@ export default function App() {
             <Route path="users" element={<ProtectedRoute roles={['admin']}><UserManagement /></ProtectedRoute>} />
             <Route path="students" element={<ProtectedRoute roles={['admin']}><StudentManagement /></ProtectedRoute>} />
             <Route path="exams" element={<ExamList />} />
+            <Route path="results" element={<ExamResults />} />
             <Route path="exams/:id" element={<ExamSession />} />
           </Route>
 

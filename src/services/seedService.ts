@@ -11,7 +11,7 @@ export async function createTestAccounts() {
 
   for (const u of testUsers) {
     try {
-      const email = u.customEmail || `${u.username}@smkprima.sch.id`;
+      const email = u.customEmail || `${u.username}@smkpu.id`;
       
       // 1. Sign up user (or get existing)
       const { data, error } = await supabase.auth.signUp({

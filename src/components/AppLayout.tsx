@@ -10,7 +10,8 @@ import {
   BookOpenCheck,
   History,
   LogOut,
-  GraduationCap
+  GraduationCap,
+  Award
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -31,6 +32,7 @@ export default function AppLayout() {
     { name: 'Rekap Absensi', path: '/app/records', icon: History, show: isStaff },
     { name: 'Data Siswa', path: '/app/students', icon: GraduationCap, show: isAdmin },
     { name: 'Ujian Online', path: '/app/exams', icon: BookOpenCheck, show: true },
+    { name: 'Hasil Ujian', path: '/app/results', icon: Award, show: true },
     { name: 'Manajemen User', path: '/app/users', icon: Users, show: isAdmin },
   ];
 

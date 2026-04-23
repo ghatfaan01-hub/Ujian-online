@@ -1,6 +1,6 @@
 {
-  "name": "SMK Prima Unggul - LMS & Absensi",
-  "description": "Aplikasi Ujian Online, Absensi Siswa, dan Karyawan untuk SMK Prima Unggul Tangerang Selatan.",
+  "name": "Portal Resmi Akademik SMK Prima Unggul",
+  "description": "Sistem Informasi Akademik Terpadu SMK Prima Unggul: Layanan Ujian Online, Absensi Digital, dan Manajemen Siswa.",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }
